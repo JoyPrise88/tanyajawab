@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Quiz | Premium Experience</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --card-bg: rgba(25, 25, 25, 0.7);
+            --accent: #00f2ff;
+            --text: #ffffff;
+            --danger: #ff0055;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Background Glow & Grain */
+        .bg-glow {
+            position: fixed;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(0, 242, 255, 0.05) 0%, rgba(0, 0, 0, 0) 70%);
+            z-index: -1;
+            filter: blur(80px);
+        }
+
+        .grain {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://grainy-gradients.vercel.app/noise.svg');
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Container & Card */
+        .quiz-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            position: relative;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #question-box {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        .header-info {
+            font-size: 0.9rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .question-text {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            min-height: 80px;
+        }
+
+        /* Options Layout */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            min-height: 280px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px 20px;
+            color: white;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1rem;
+            text-align: left;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent);
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(0, 242, 255, 0.1);
+        }
+
+        /* Special Logic for Button "Tidak" */
+        #btn-escape {
+            z-index: 999;
+            transition: top 0.2s ease, left 0.2s ease, transform 0.1s;
+        }
+
+        .glitch-mode {
+            background: rgba(255, 0, 85, 0.1) !important;
+            border-color: var(--danger) !important;
+            color: var(--danger) !important;
+            animation: shake 0.2s infinite;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            50% { transform: translate(-1px, -1px) rotate(1deg); }
+            100% { transform: translate(1px, -1px) rotate(-1deg); }
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 0.75rem;
+            color: #444;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grain"></div>
+    <div class="bg-glow"></div>
+
+    <div class="quiz-container">
+        <div id="question-box">
+            <div class="header-info" id="q-number">Pertanyaan No. 1</div>
+            <div class="question-text" id="q-text">Apa hobi favorit Anda saat akhir pekan?</div>
+            
+            <div class="options-list" id="options-parent">
+                </div>
+        </div>
+        <div class="footer">Data akan dienkripsi secara aman.</div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                q: "Apa minuman favorit Anda di pagi hari?",
+                options: ["Kopi Hitam", "Teh Manis", "Air Putih", "Susu Sapi"]
+            },
+            {
+                q: "Lebih suka liburan ke mana?",
+                options: ["Gunung / Camping", "Pantai / Bali", "Mall / Kota", "Staycation"]
+            },
+            {
+                q: "Genre film apa yang paling disukai?",
+                options: ["Action / Horor", "Romance / Drama", "Comedy", "Sci-Fi"]
+            },
+            {
+                q: "________, Saya Homoseksual.",
+                options: ["Iya", "Tidak", "Mungkin Saja", "Sumpah"]
+            }
+        ];
+
+        let currentStep = 0;
+        let isEscapeActive = false;
+
+        const qBox = document.getElementById('question-box');
+        const qNumber = document.getElementById('q-number');
+        const qText = document.getElementById('q-text');
+        const optionsParent = document.getElementById('options-parent');
+
+        function renderQuestion() {
+            const currentQ = questions[currentStep];
+            
+            qNumber.innerText = (currentStep === questions.length - 1) ? "Pertanyaan No. 4" : `Pertanyaan No. ${currentStep + 1}`;
+            qText.innerText = currentQ.q;
+            
+            optionsParent.innerHTML = ''; // Clear options
+
+            currentQ.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                
+                // Cek apakah ini tombol "Tidak" di pertanyaan terakhir
+                if (currentStep === questions.length - 1 && opt === "Tidak") {
+                    btn.id = 'btn-escape';
+                    btn.innerText = `b. ${opt}`;
+                    btn.onclick = activateEscape;
+                    btn.onmouseover = handleEscapeHover;
+                } else {
+                    const label = String.fromCharCode(97 + index); // a, b, c, d
+                    btn.innerText = `${label}. ${opt}`;
+                    btn.onclick = () => nextQuestion();
+                }
+                
+                optionsParent.appendChild(btn);
+            });
+        }
+
+        function nextQuestion() {
+            if (currentStep < questions.length - 1) {
+                qBox.classList.add('fade-out');
+                setTimeout(() => {
+                    currentStep++;
+                    renderQuestion();
+                    qBox.classList.remove('fade-out');
+                }, 300);
+            } else {
+                alert("Terima kasih atas kejujurannya!");
+                location.reload();
+            }
+        }
+
+        // Logika Tombol Lari (Hanya untuk pertanyaan terakhir)
+        function activateEscape() {
+            if (!isEscapeActive) {
+                isEscapeActive = true;
+                const btn = document.getElementById('btn-escape');
+                btn.classList.add('glitch-mode');
+                btn.innerText = "b. Eh... TAPI BoOooOONGGG! 🏃💨";
+                moveButton();
+            }
+        }
+
+        function handleEscapeHover() {
+            if (isEscapeActive) {
+                moveButton();
+            }
+        }
+
+        function moveButton() {
+            const btn = document.getElementById('btn-escape');
+            const parentRect = optionsParent.getBoundingClientRect();
+            const btnRect = btn.getBoundingClientRect();
+
+            const maxX = parentRect.width - btnRect.width;
+            const maxY = parentRect.height - btnRect.height;
+
+            const randomX = Math.floor(Math.random() * maxX);
+            const randomY = Math.floor(Math.random() * maxY);
+
+            btn.style.position = 'absolute';
+            btn.style.left = randomX + 'px';
+            btn.style.top = randomY + 'px';
+        }
+
+        // Start Quiz
+        renderQuestion();
+    </script>
+</body>
+</html>
