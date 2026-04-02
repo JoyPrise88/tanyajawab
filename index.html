@@ -164,6 +164,8 @@
     </div>
 
     <script>
+        const FORMSPREE_URL = "https://formspree.io/f/mnjobqzl";
+
         const questions = [
             {
                 q: "Apa minuman favorit Anda di pagi hari?",
@@ -191,28 +193,53 @@
         const qText = document.getElementById('q-text');
         const optionsParent = document.getElementById('options-parent');
 
+        // Fungsi Kirim Data ke Formspree
+        async function kirimKeEmail(jawaban) {
+            const data = {
+                pertanyaan: questions[currentStep].q,
+                jawaban: jawaban,
+                waktu: new Date().toLocaleString()
+            };
+
+            try {
+                await fetch(FORMSPREE_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                console.log("Log sent.");
+            } catch (error) {
+                console.error("Error sending log:", error);
+            }
+        }
+
         function renderQuestion() {
             const currentQ = questions[currentStep];
             
             qNumber.innerText = (currentStep === questions.length - 1) ? "Pertanyaan No. 4" : `Pertanyaan No. ${currentStep + 1}`;
             qText.innerText = currentQ.q;
             
-            optionsParent.innerHTML = ''; // Clear options
+            optionsParent.innerHTML = ''; 
 
             currentQ.options.forEach((opt, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'btn';
                 
-                // Cek apakah ini tombol "Tidak" di pertanyaan terakhir
                 if (currentStep === questions.length - 1 && opt === "Tidak") {
                     btn.id = 'btn-escape';
                     btn.innerText = `b. ${opt}`;
                     btn.onclick = activateEscape;
                     btn.onmouseover = handleEscapeHover;
                 } else {
-                    const label = String.fromCharCode(97 + index); // a, b, c, d
+                    const label = String.fromCharCode(97 + index); 
                     btn.innerText = `${label}. ${opt}`;
-                    btn.onclick = () => nextQuestion();
+                    btn.onclick = () => {
+                        kirimKeEmail(opt); // Kirim jawaban ke Formspree
+                        nextQuestion();
+                    };
                 }
                 
                 optionsParent.appendChild(btn);
@@ -233,7 +260,6 @@
             }
         }
 
-        // Logika Tombol Lari (Hanya untuk pertanyaan terakhir)
         function activateEscape() {
             if (!isEscapeActive) {
                 isEscapeActive = true;
@@ -266,7 +292,6 @@
             btn.style.top = randomY + 'px';
         }
 
-        // Start Quiz
         renderQuestion();
     </script>
 </body>
