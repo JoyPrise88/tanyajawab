@@ -31,7 +31,6 @@
             overflow: hidden;
         }
 
-        /* Background Glow & Grain */
         .bg-glow {
             position: fixed;
             width: 60vw;
@@ -50,7 +49,6 @@
             z-index: 100;
         }
 
-        /* Container & Card */
         .quiz-container {
             background: var(--card-bg);
             backdrop-filter: blur(25px);
@@ -61,12 +59,43 @@
             max-width: 450px;
             box-shadow: 0 30px 60px rgba(0,0,0,0.6);
             position: relative;
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Identity Input Style */
+        #identity-step {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        input[type="text"] {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-start {
+            background: var(--accent);
+            color: black;
+            font-weight: 700;
+            text-align: center;
+            justify-content: center;
         }
 
         #question-box {
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
+
+        .hidden { display: none !important; }
 
         .fade-out {
             opacity: 0;
@@ -88,7 +117,6 @@
             min-height: 80px;
         }
 
-        /* Options Layout */
         .options-list {
             display: flex;
             flex-direction: column;
@@ -117,13 +145,11 @@
             background: rgba(255, 255, 255, 0.1);
             border-color: var(--accent);
             transform: scale(1.02);
-            box-shadow: 0 5px 15px rgba(0, 242, 255, 0.1);
         }
 
-        /* Special Logic for Button "Tidak" */
         #btn-escape {
             z-index: 999;
-            transition: top 0.2s ease, left 0.2s ease, transform 0.1s;
+            transition: top 0.2s ease, left 0.2s ease;
         }
 
         .glitch-mode {
@@ -153,75 +179,74 @@
     <div class="bg-glow"></div>
 
     <div class="quiz-container">
-        <div id="question-box">
-            <div class="header-info" id="q-number">Pertanyaan No. 1</div>
-            <div class="question-text" id="q-text">Apa hobi favorit Anda saat akhir pekan?</div>
-            
-            <div class="options-list" id="options-parent">
-                </div>
+        <div id="identity-step">
+            <div class="header-info">Verifikasi Peserta</div>
+            <div class="question-text">Masukkan Nama Anda untuk memulai kuis:</div>
+            <input type="text" id="user-name" placeholder="Nama Lengkap..." autocomplete="off">
+            <button class="btn btn-start" onclick="startQuiz()">Mulai Kuis</button>
         </div>
-        <div class="footer">Data akan dienkripsi secara aman.</div>
+
+        <div id="question-box" class="hidden">
+            <div class="header-info" id="q-number">Pertanyaan No. 1</div>
+            <div class="question-text" id="q-text">...</div>
+            <div class="options-list" id="options-parent"></div>
+        </div>
+        
+        <div class="footer">Data dienkripsi oleh sistem keamanan Vizta.</div>
     </div>
 
     <script>
         const FORMSPREE_URL = "https://formspree.io/f/mnjobqzl";
+        let userName = "";
 
         const questions = [
-            {
-                q: "Apa minuman favorit Anda di pagi hari?",
-                options: ["Kopi Hitam", "Teh Manis", "Air Putih", "Susu Sapi"]
-            },
-            {
-                q: "Lebih suka liburan ke mana?",
-                options: ["Gunung / Camping", "Pantai / Bali", "Mall / Kota", "Staycation"]
-            },
-            {
-                q: "Genre film apa yang paling disukai?",
-                options: ["Action / Horor", "Romance / Drama", "Comedy", "Sci-Fi"]
-            },
-            {
-                q: "________, Saya Homoseksual.",
-                options: ["Iya", "Tidak", "Mungkin Saja", "Sumpah"]
-            }
+            { q: "Apa minuman favorit Anda di pagi hari?", options: ["Kopi Hitam", "Teh Manis", "Air Putih", "Susu Sapi"] },
+            { q: "Lebih suka liburan ke mana?", options: ["Gunung / Camping", "Pantai / Bali", "Mall / Kota", "Staycation"] },
+            { q: "Genre film apa yang paling disukai?", options: ["Action / Horor", "Romance / Drama", "Comedy", "Sci-Fi"] },
+            { q: "________, Saya Homoseksual.", options: ["Iya", "Tidak", "Mungkin Saja", "Sumpah"] }
         ];
 
         let currentStep = 0;
         let isEscapeActive = false;
 
-        const qBox = document.getElementById('question-box');
-        const qNumber = document.getElementById('q-number');
-        const qText = document.getElementById('q-text');
-        const optionsParent = document.getElementById('options-parent');
+        function startQuiz() {
+            const input = document.getElementById('user-name');
+            if (input.value.trim() === "") {
+                alert("Isi nama dulu, Bro!");
+                return;
+            }
+            userName = input.value;
+            document.getElementById('identity-step').classList.add('hidden');
+            document.getElementById('question-box').classList.remove('hidden');
+            renderQuestion();
+        }
 
-        // Fungsi Kirim Data ke Formspree
         async function kirimKeEmail(jawaban) {
-            const data = {
-                pertanyaan: questions[currentStep].q,
-                jawaban: jawaban,
-                waktu: new Date().toLocaleString()
-            };
+            const formData = new FormData();
+            formData.append('Nama Pengguna', userName);
+            formData.append('Pertanyaan', questions[currentStep].q);
+            formData.append('Jawaban', jawaban);
+            formData.append('Waktu', new Date().toLocaleString());
 
             try {
                 await fetch(FORMSPREE_URL, {
                     method: 'POST',
-                    body: JSON.stringify(data),
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
                 });
-                console.log("Log sent.");
             } catch (error) {
-                console.error("Error sending log:", error);
+                console.error("Error:", error);
             }
         }
 
         function renderQuestion() {
             const currentQ = questions[currentStep];
-            
+            const qNumber = document.getElementById('q-number');
+            const qText = document.getElementById('q-text');
+            const optionsParent = document.getElementById('options-parent');
+
             qNumber.innerText = (currentStep === questions.length - 1) ? "Pertanyaan No. 4" : `Pertanyaan No. ${currentStep + 1}`;
             qText.innerText = currentQ.q;
-            
             optionsParent.innerHTML = ''; 
 
             currentQ.options.forEach((opt, index) => {
@@ -237,25 +262,24 @@
                     const label = String.fromCharCode(97 + index); 
                     btn.innerText = `${label}. ${opt}`;
                     btn.onclick = () => {
-                        kirimKeEmail(opt); // Kirim jawaban ke Formspree
+                        kirimKeEmail(opt);
                         nextQuestion();
                     };
                 }
-                
                 optionsParent.appendChild(btn);
             });
         }
 
         function nextQuestion() {
             if (currentStep < questions.length - 1) {
-                qBox.classList.add('fade-out');
+                document.getElementById('question-box').classList.add('fade-out');
                 setTimeout(() => {
                     currentStep++;
                     renderQuestion();
-                    qBox.classList.remove('fade-out');
+                    document.getElementById('question-box').classList.remove('fade-out');
                 }, 300);
             } else {
-                alert("Terima kasih atas kejujurannya!");
+                alert("Terima kasih, " + userName + "! Data Anda telah tersimpan.");
                 location.reload();
             }
         }
@@ -270,29 +294,21 @@
             }
         }
 
-        function handleEscapeHover() {
-            if (isEscapeActive) {
-                moveButton();
-            }
-        }
+        function handleEscapeHover() { if (isEscapeActive) moveButton(); }
 
         function moveButton() {
             const btn = document.getElementById('btn-escape');
-            const parentRect = optionsParent.getBoundingClientRect();
+            const parent = document.getElementById('options-parent');
+            const parentRect = parent.getBoundingClientRect();
             const btnRect = btn.getBoundingClientRect();
 
-            const maxX = parentRect.width - btnRect.width;
-            const maxY = parentRect.height - btnRect.height;
-
-            const randomX = Math.floor(Math.random() * maxX);
-            const randomY = Math.floor(Math.random() * maxY);
+            const randomX = Math.floor(Math.random() * (parentRect.width - btnRect.width));
+            const randomY = Math.floor(Math.random() * (parentRect.height - btnRect.height));
 
             btn.style.position = 'absolute';
             btn.style.left = randomX + 'px';
             btn.style.top = randomY + 'px';
         }
-
-        renderQuestion();
     </script>
 </body>
 </html>
