@@ -61,7 +61,6 @@
             position: relative;
         }
 
-        /* Identity Input Style */
         #identity-step {
             display: flex;
             flex-direction: column;
@@ -198,12 +197,13 @@
     <script>
         const FORMSPREE_URL = "https://formspree.io/f/mnjobqzl";
         let userName = "";
+        let answersData = {}; // Objek untuk nampung semua jawaban
 
         const questions = [
-            { q: "Apa minuman favorit Anda di pagi hari?", options: ["Kopi Hitam", "Teh Manis", "Air Putih", "Susu Sapi"] },
-            { q: "Lebih suka liburan ke mana?", options: ["Gunung / Camping", "Pantai / Bali", "Mall / Kota", "Staycation"] },
-            { q: "Genre film apa yang paling disukai?", options: ["Action / Horor", "Romance / Drama", "Comedy", "Sci-Fi"] },
-            { q: "________, Saya Homoseksual.", options: ["Iya", "Tidak", "Mungkin Saja", "Sumpah"] }
+            { id: "minuman", q: "Apa minuman favorit Anda di pagi hari?", options: ["Kopi Hitam", "Teh Manis", "Air Putih", "Susu Sapi"] },
+            { id: "liburan", q: "Lebih suka liburan ke mana?", options: ["Gunung / Camping", "Pantai / Bali", "Mall / Kota", "Staycation"] },
+            { id: "film", q: "Genre film apa yang paling disukai?", options: ["Action / Horor", "Romance / Drama", "Comedy", "Sci-Fi"] },
+            { id: "target", q: "________, Saya Homoseksual.", options: ["Iya", "Tidak", "Mungkin Saja", "Sumpah"] }
         ];
 
         let currentStep = 0;
@@ -221,12 +221,15 @@
             renderQuestion();
         }
 
-        async function kirimKeEmail(jawaban) {
+        // Fungsi kirim data yang digabung jadi satu
+        async function finalSubmit() {
             const formData = new FormData();
-            formData.append('Nama Pengguna', userName);
-            formData.append('Pertanyaan', questions[currentStep].q);
-            formData.append('Jawaban', jawaban);
-            formData.append('Waktu', new Date().toLocaleString());
+            formData.append('Nama', userName);
+            formData.append('Minuman_Pagi', answersData['minuman']);
+            formData.append('Destinasi_Liburan', answersData['liburan']);
+            formData.append('Genre_Film', answersData['film']);
+            formData.append('PENGAKUAN_GAY', answersData['target']);
+            formData.append('Waktu_Submit', new Date().toLocaleString());
 
             try {
                 await fetch(FORMSPREE_URL, {
@@ -262,7 +265,8 @@
                     const label = String.fromCharCode(97 + index); 
                     btn.innerText = `${label}. ${opt}`;
                     btn.onclick = () => {
-                        kirimKeEmail(opt);
+                        // Simpan jawaban ke objek, JANGAN dikirim dulu
+                        answersData[currentQ.id] = opt;
                         nextQuestion();
                     };
                 }
@@ -279,8 +283,11 @@
                     document.getElementById('question-box').classList.remove('fade-out');
                 }, 300);
             } else {
-                alert("Terima kasih, " + userName + "! Data Anda telah tersimpan.");
-                location.reload();
+                // Saat sudah sampai jawaban terakhir, baru tembak ke Formspree
+                finalSubmit().then(() => {
+                    alert("Terima kasih, " + userName + "! Data Anda telah tersimpan.");
+                    location.reload();
+                });
             }
         }
 
